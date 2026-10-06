@@ -33,8 +33,8 @@ straightforward to meet the GPL's source-availability requirements for the binar
 
 - Apple Silicon Mac (M1 or newer)
 - **macOS 26 (Tahoe) or newer.** The app bundles Homebrew bottles that are built for macOS 26,
-  so it will not run on older macOS. Supporting older versions would require compiling every
-  dependency from source with a lower deployment target.
+  so **the prebuilt release will not run on older macOS** (Sequoia, Sonoma, ...). If you are on an
+  older macOS, see [Older macOS: build it on your own Mac](#older-macos-build-it-on-your-own-mac).
 
 ## Launching on an M-series MacBook
 
@@ -110,10 +110,80 @@ bash workspace/pulseview/macos-packaging/3-package-app.sh     # PulseView.app, .
 Homebrew's own `libsigrok` has no C++ bindings (`libsigrokcxx`), which PulseView requires,
 which is why `libsigrok` is built from source here.
 
+## Older macOS: build it on your own Mac
+
+The release only runs on macOS 26+, but the scripts above can produce a build for an older macOS.
+Homebrew serves prebuilt libraries matched to the macOS version it runs on, so a build made on
+(for example) macOS 15 uses libraries that target macOS 15. The resulting app runs on that macOS
+version **and newer**, never older.
+
+**Status: untested.** The scripts have only been run on macOS 26 (Tahoe) on an M1 MacBook.
+Treat this section as a best-effort guide, not a support promise.
+
+**Prerequisites**
+
+- An Apple Silicon Mac and an admin account.
+- Xcode Command Line Tools: `xcode-select --install`
+- [Homebrew](https://brew.sh), then the tools listed under [Rebuilding](#rebuilding).
+- Time and disk space: about 30+ minutes and a few GB when Homebrew can download prebuilt
+  packages. If your macOS is no longer supported by Homebrew (roughly older than the latest
+  three versions), Homebrew compiles Qt and other packages from source, which can take hours and
+  may fail. In that case this route is probably not worth it.
+
+**Steps**
+
+```
+mkdir workspace && cd workspace
+git clone https://github.com/jeffrymahbuubi/pulseview.git
+git clone https://github.com/sigrokproject/libsigrok.git
+git clone https://github.com/sigrokproject/libsigrokdecode.git
+git -C libsigrok checkout 0bc2487778e660f4d3116729b6f4aee2b1996bb0
+git -C libsigrokdecode checkout 71f451443029322d57376214c330b518efd84f88
+bash pulseview/macos-packaging/1-build-libs.sh
+bash pulseview/macos-packaging/2-build-pulseview.sh
+bash pulseview/macos-packaging/3-package-app.sh
+```
+
+The app and a `.dmg` / `.zip` end up in `workspace/dist` and `workspace/release`. Because the app
+is built locally and never downloaded, macOS does not quarantine it.
+
+**Check the result before trusting it**
+
+1. *Minimum macOS version.* Every binary in the bundle must target your macOS or older:
+
+   ```
+   cd workspace/dist/PulseView.app
+   for f in $(find . -type f); do
+     file -b "$f" | grep -q Mach-O && otool -l "$f" | awk '/LC_BUILD_VERSION/{f=1} f&&/minos/{print $2; f=0}'
+   done | sort -V | uniq -c
+   ```
+
+   The highest number printed must not be greater than your macOS version. If it is, a library
+   built for a newer macOS leaked into the bundle and the app may not launch on your Mac.
+   `sw_vers -productVersion` shows your version.
+2. *Clean launch.* Start the app with a stripped environment, so it cannot silently rely on
+   Homebrew's libraries:
+
+   ```
+   env -i HOME=$HOME PATH=/usr/bin:/bin workspace/dist/PulseView.app/Contents/MacOS/PulseView -l 5
+   ```
+
+   It should open a window. A message like `Library not loaded: /opt/homebrew/...` means a
+   library was not bundled.
+
+**Things that may need adjusting on other macOS versions**
+
+- `3-package-app.sh` deletes some library files by exact name (for example `libwebp.7.dylib`).
+  Missing files are ignored, but a different library version number elsewhere can leave extra,
+  unused files in the bundle. That is harmless apart from size.
+- Package availability: Qt 6 and Python 3.14 from Homebrew may not be installable on every older
+  macOS. If Homebrew cannot install them, the build cannot proceed as written.
+- If it fails, open an issue and include the full terminal output and `sw_vers` output.
+
 ## License
 
 PulseView, libsigrok and libsigrokdecode are GPL-3.0-or-later; see `COPYING` in the repository
-root. The scripts in this directory are provided under the same license.
+root. The scripts in `macos-packaging/` are provided under the same license.
 
 ---
 
