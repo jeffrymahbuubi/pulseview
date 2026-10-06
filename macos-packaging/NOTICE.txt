@@ -1,0 +1,16 @@
+PulseView (unofficial macOS arm64 build)
+=========================================
+This is an unmodified build of PulseView from the sigrok project (https://sigrok.org),
+licensed GPL-3.0-or-later (see COPYING). It is NOT an official sigrok release and is not
+endorsed by the sigrok project.
+
+Corresponding source (exact commits used):
+  pulseview       https://github.com/sigrokproject/pulseview       af02198741b4e57c9f9b796bd5e6c0f2ae9f2f2b
+  libsigrok       https://github.com/sigrokproject/libsigrok       0bc2487778e660f4d3116729b6f4aee2b1996bb0
+  libsigrokdecode https://github.com/sigrokproject/libsigrokdecode 71f451443029322d57376214c330b518efd84f88
+
+Bundled third-party libraries (dynamically linked, replaceable in Contents/Frameworks):
+  Qt 6 (LGPL-3.0) - https://www.qt.io           glib/glibmm/libsigc++ (LGPL-2.1+)
+  Boost (BSL-1.0)                                libusb, libftdi, libserialport, hidapi, libzip
+  Python 3.14 (PSF license) - trimmed stdlib     OpenSSL/ICU/freetype/harfbuzz/libpng/libjpeg etc.
+Sources for these are available from their upstream projects / the Homebrew formulae of the same name.
